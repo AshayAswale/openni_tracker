@@ -4,6 +4,7 @@
 #include <ros/package.h>
 #include <tf/transform_broadcaster.h>
 #include <kdl/frames.hpp>
+#include <sensor_msgs/Image.h>
 
 #include <XnOpenNI.h>
 #include <XnCodecIDs.h>
@@ -17,6 +18,8 @@ xn::UserGenerator  g_UserGenerator;
 
 XnBool g_bNeedPose   = FALSE;
 XnChar g_strPose[20] = "";
+
+bool start_code = false;
 
 void XN_CALLBACK_TYPE User_NewUser(xn::UserGenerator& generator, XnUserID nId, void* pCookie) {
 	ROS_INFO("New User %d", nId);
@@ -76,6 +79,8 @@ void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string
 
     char child_frame_no[128];
     snprintf(child_frame_no, sizeof(child_frame_no), "%s_%d", child_frame_id.c_str(), user);
+    //##########################
+    // CHANGE HERE IF REQUIRED!!
 
     tf::Transform transform;
     transform.setOrigin(tf::Vector3(x, y, z));
@@ -126,6 +131,11 @@ void publishTransforms(const std::string& frame_id) {
     }
 }
 
+void rgb_image_cb(sensor_msgs::Image image)
+{
+  start_code = true;
+}
+
 #define CHECK_RC(nRetVal, what)										\
 	if (nRetVal != XN_STATUS_OK)									\
 	{																\
@@ -136,6 +146,15 @@ void publishTransforms(const std::string& frame_id) {
 int main(int argc, char **argv) {
     ros::init(argc, argv, "openni_tracker");
     ros::NodeHandle nh;
+
+    ros::Subscriber subscribe = nh.subscribe("/camera/rgb/image_color", 1, rgb_image_cb);
+
+    if(!start_code)
+    {
+      ROS_INFO("No data from kinect yet... Sleeping.");
+      ros::spinOnce();
+      ros::Rate(1).sleep();
+    }
 
     string configFilename = ros::package::getPath("openni_tracker") + "/openni_tracker.xml";
     XnStatus nRetVal = g_Context.InitFromXmlFile(configFilename.c_str());
