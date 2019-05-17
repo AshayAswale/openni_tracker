@@ -134,7 +134,6 @@ void publishTransforms(const std::string& frame_id) {
 void rgb_image_cb(sensor_msgs::Image image)
 {
   start_code = true;
-  ROS_WARN("###################################################################################");
 }
 
 #define CHECK_RC(nRetVal, what)										\
