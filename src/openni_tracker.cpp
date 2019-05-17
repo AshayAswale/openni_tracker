@@ -134,6 +134,7 @@ void publishTransforms(const std::string& frame_id) {
 void rgb_image_cb(sensor_msgs::Image image)
 {
   start_code = true;
+  ROS_WARN("###################################################################################");
 }
 
 #define CHECK_RC(nRetVal, what)										\
@@ -148,12 +149,12 @@ int main(int argc, char **argv) {
     ros::NodeHandle nh;
 
     ros::Subscriber subscribe = nh.subscribe("/camera/rgb/image_color", 1, rgb_image_cb);
+    ros::Rate loop_rate(10.0);
 
-    if(!start_code)
+    while (ros::ok() && !start_code)
     {
-      ROS_INFO("No data from kinect yet... Sleeping.");
-      ros::spinOnce();
-      ros::Rate(1).sleep();
+        loop_rate.sleep();
+        ros::spinOnce();
     }
 
     string configFilename = ros::package::getPath("openni_tracker") + "/openni_tracker.xml";
