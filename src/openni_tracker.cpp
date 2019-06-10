@@ -78,7 +78,7 @@ void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string
     rotation.GetQuaternion(qx, qy, qz, qw);
 
     char child_frame_no[128];
-    snprintf(child_frame_no, sizeof(child_frame_no), "%s_%d", child_frame_id.c_str(), user);
+    snprintf(child_frame_no, sizeof(child_frame_no), "%s", child_frame_id.c_str());
     //##########################
     // CHANGE HERE IF REQUIRED!!
 
