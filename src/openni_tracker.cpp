@@ -60,6 +60,17 @@ void XN_CALLBACK_TYPE UserPose_PoseDetected(xn::PoseDetectionCapability& capabil
 
 void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string const& frame_id, string const& child_frame_id) {
     static tf::TransformBroadcaster br;
+    static tf::Transform left_hip_final_transform, right_hip_final_transform, pelvis_final_transform;
+    static tf::Vector3 pelvis_vector;
+
+    if (child_frame_id.compare("pelvis")==0)
+    {
+    pelvis_vector = left_hip_final_transform.getOrigin() / 2 + right_hip_final_transform.getOrigin() / 2;
+    pelvis_final_transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0));
+    pelvis_final_transform.setOrigin(pelvis_vector);
+    br.sendTransform(tf::StampedTransform(pelvis_final_transform, ros::Time::now(), frame_id, child_frame_id));
+    return;
+    }
 
     XnSkeletonJointPosition joint_position;
     g_UserGenerator.GetSkeletonCap().GetSkeletonJointPosition(user, joint, joint_position);
@@ -77,9 +88,8 @@ void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string
     double qx, qy, qz, qw;
     rotation.GetQuaternion(qx, qy, qz, qw);
 
-    char child_frame_no[128];
-// 	snprintf(child_frame_no, sizeof(child_frame_no), "%s_%d", child_frame_id.c_str(), user);
-    snprintf(child_frame_no, sizeof(child_frame_no), "%s", child_frame_id.c_str());
+    // char child_frame_no[128];
+    // snprintf(child_frame_no, sizeof(child_frame_no), "%s_%d", child_frame_id.c_str(), user);
     //##########################
     // CHANGE HERE IF REQUIRED!!
 
@@ -96,7 +106,12 @@ void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string
 
     transform = change_frame * transform;
 
-    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), frame_id, child_frame_no));
+    if (child_frame_id.compare("left_hip") == 0)
+      left_hip_final_transform = transform;
+    else if (child_frame_id.compare("right_hip") == 0)
+      right_hip_final_transform = transform;
+
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), frame_id, child_frame_id));
 }
 
 void publishTransforms(const std::string& frame_id) {
@@ -129,6 +144,7 @@ void publishTransforms(const std::string& frame_id) {
         publishTransform(user, XN_SKEL_RIGHT_HIP,      frame_id, "right_hip");
         publishTransform(user, XN_SKEL_RIGHT_KNEE,     frame_id, "right_knee");
         publishTransform(user, XN_SKEL_RIGHT_FOOT,     frame_id, "right_foot");
+        publishTransform(user, XN_SKEL_TORSO, frame_id, "pelvis");
     }
 }
 
