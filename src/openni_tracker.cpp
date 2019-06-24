@@ -18,6 +18,7 @@ xn::UserGenerator  g_UserGenerator;
 
 XnBool g_bNeedPose   = FALSE;
 XnChar g_strPose[20] = "";
+std::string PREFIX_OPENNI = "/openni/";
 
 bool start_code = false;
 
@@ -68,7 +69,8 @@ void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string
     pelvis_vector = left_hip_final_transform.getOrigin() / 2 + right_hip_final_transform.getOrigin() / 2;
     pelvis_final_transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0));
     pelvis_final_transform.setOrigin(pelvis_vector);
-    br.sendTransform(tf::StampedTransform(pelvis_final_transform, ros::Time::now(), frame_id, child_frame_id));
+    br.sendTransform(
+        tf::StampedTransform(pelvis_final_transform, ros::Time::now(), frame_id, PREFIX_OPENNI+child_frame_id));
     return;
     }
 
@@ -111,7 +113,7 @@ void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string
     else if (child_frame_id.compare("right_hip") == 0)
       right_hip_final_transform = transform;
 
-    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), frame_id, child_frame_id));
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), frame_id, PREFIX_OPENNI+child_frame_id));
 }
 
 void publishTransforms(const std::string& frame_id) {
