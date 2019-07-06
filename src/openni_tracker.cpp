@@ -67,7 +67,7 @@ void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string
     if (child_frame_id.compare("pelvis")==0)
     {
     pelvis_vector = left_hip_final_transform.getOrigin() / 2 + right_hip_final_transform.getOrigin() / 2;
-    pelvis_final_transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0));
+    pelvis_final_transform.setRotation(tf::Quaternion(0.0, 0.0, M_PI));
     pelvis_final_transform.setOrigin(pelvis_vector);
     br.sendTransform(
         tf::StampedTransform(pelvis_final_transform, ros::Time::now(), frame_id, PREFIX_OPENNI+child_frame_id));
