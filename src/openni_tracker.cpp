@@ -131,21 +131,21 @@ void publishTransforms(const std::string& frame_id) {
         publishTransform(user, XN_SKEL_NECK,           frame_id, "neck");
         publishTransform(user, XN_SKEL_TORSO,          frame_id, "torso");
 
-        publishTransform(user, XN_SKEL_LEFT_SHOULDER,  frame_id, "left_shoulder");
-        publishTransform(user, XN_SKEL_LEFT_ELBOW,     frame_id, "left_elbow");
-        publishTransform(user, XN_SKEL_LEFT_HAND,      frame_id, "left_hand");
+        publishTransform(user, XN_SKEL_LEFT_SHOULDER,  frame_id, "right_shoulder");
+        publishTransform(user, XN_SKEL_LEFT_ELBOW,     frame_id, "right_elbow");
+        publishTransform(user, XN_SKEL_LEFT_HAND,      frame_id, "right_hand");
 
-        publishTransform(user, XN_SKEL_RIGHT_SHOULDER, frame_id, "right_shoulder");
-        publishTransform(user, XN_SKEL_RIGHT_ELBOW,    frame_id, "right_elbow");
-        publishTransform(user, XN_SKEL_RIGHT_HAND,     frame_id, "right_hand");
+        publishTransform(user, XN_SKEL_RIGHT_SHOULDER, frame_id, "left_shoulder");
+        publishTransform(user, XN_SKEL_RIGHT_ELBOW,    frame_id, "left_elbow");
+        publishTransform(user, XN_SKEL_RIGHT_HAND,     frame_id, "left_hand");
 
-        publishTransform(user, XN_SKEL_LEFT_HIP,       frame_id, "left_hip");
-        publishTransform(user, XN_SKEL_LEFT_KNEE,      frame_id, "left_knee");
-        publishTransform(user, XN_SKEL_LEFT_FOOT,      frame_id, "left_foot");
+        publishTransform(user, XN_SKEL_LEFT_HIP,       frame_id, "right_hip");
+        publishTransform(user, XN_SKEL_LEFT_KNEE,      frame_id, "right_knee");
+        publishTransform(user, XN_SKEL_LEFT_FOOT,      frame_id, "right_foot");
 
-        publishTransform(user, XN_SKEL_RIGHT_HIP,      frame_id, "right_hip");
-        publishTransform(user, XN_SKEL_RIGHT_KNEE,     frame_id, "right_knee");
-        publishTransform(user, XN_SKEL_RIGHT_FOOT,     frame_id, "right_foot");
+        publishTransform(user, XN_SKEL_RIGHT_HIP,      frame_id, "left_hip");
+        publishTransform(user, XN_SKEL_RIGHT_KNEE,     frame_id, "left_knee");
+        publishTransform(user, XN_SKEL_RIGHT_FOOT,     frame_id, "left_foot");
         publishTransform(user, XN_SKEL_TORSO, frame_id, "pelvis");
     }
 }
