@@ -62,7 +62,9 @@ void XN_CALLBACK_TYPE UserPose_PoseDetected(xn::PoseDetectionCapability& capabil
 void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string const& frame_id, string const& child_frame_id) {
     static tf::TransformBroadcaster br;
     static tf::Transform left_hip_final_transform, right_hip_final_transform, pelvis_final_transform;
-    static tf::Vector3 pelvis_vector;
+    static tf::Transform left_shoulder_transform, right_shoulder_transform;
+    static tf::Transform left_elbow_transform, right_elbow_transform;
+    static tf::Vector3 pelvis_vector, temp_vector;
 
     if (child_frame_id.compare("pelvis")==0)
     {
@@ -80,15 +82,15 @@ void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string
     double y = joint_position.position.Y / 1000.0;
     double z = joint_position.position.Z / 1000.0;
 
-    XnSkeletonJointOrientation joint_orientation;
-    g_UserGenerator.GetSkeletonCap().GetSkeletonJointOrientation(user, joint, joint_orientation);
+    // XnSkeletonJointOrientation joint_orientation;
+    // g_UserGenerator.GetSkeletonCap().GetSkeletonJointOrientation(user, joint, joint_orientation);
 
-    XnFloat* m = joint_orientation.orientation.elements;
-    KDL::Rotation rotation(m[0], m[1], m[2],
-    					   m[3], m[4], m[5],
-    					   m[6], m[7], m[8]);
-    double qx, qy, qz, qw;
-    rotation.GetQuaternion(qx, qy, qz, qw);
+    // XnFloat* m = joint_orientation.orientation.elements;
+    // KDL::Rotation rotation(m[0], m[1], m[2],
+    // 					   m[3], m[4], m[5],
+    // 					   m[6], m[7], m[8]);
+    // double qx, qy, qz, qw;
+    // rotation.GetQuaternion(qx, qy, qz, qw);
 
     // char child_frame_no[128];
     // snprintf(child_frame_no, sizeof(child_frame_no), "%s_%d", child_frame_id.c_str(), user);
@@ -97,13 +99,15 @@ void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string
 
     tf::Transform transform;
     transform.setOrigin(tf::Vector3(x, y, z));
-    transform.setRotation(tf::Quaternion(qx, -qy, -qz, qw));
+    // tf::Quaternion(pitch, roll, yaw);
+    transform.setRotation(tf::Quaternion(M_PI/2, -M_PI/2, 0.0));
+    // transform.setRotation(tf::Quaternion(qx, -qy, -qz, qw));
 
     // #4994
     tf::Transform change_frame;
     change_frame.setOrigin(tf::Vector3(0, 0, 0));
     tf::Quaternion frame_rotation;
-    frame_rotation.setEulerZYX(1.5708, 0, 1.5708);
+    frame_rotation.setEulerZYX(M_PI/2, 0, M_PI/2);
     change_frame.setRotation(frame_rotation);
 
     transform = change_frame * transform;
@@ -112,7 +116,57 @@ void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string
       left_hip_final_transform = transform;
     else if (child_frame_id.compare("right_hip") == 0)
       right_hip_final_transform = transform;
-
+    else if (child_frame_id.compare("left_shoulder") == 0)
+      left_shoulder_transform = transform;
+    else if (child_frame_id.compare("right_shoulder") == 0)
+      right_shoulder_transform = transform;
+    else if (child_frame_id.compare("left_elbow") == 0)
+    {
+      temp_vector = transform.getOrigin() - left_shoulder_transform.getOrigin();
+      tfScalar yaw = atan2(temp_vector.getX(), temp_vector.getY());
+      tfScalar roll = atan2(temp_vector.getY(), temp_vector.getZ());
+      //   transform.setRotation(tf::Quaternion(0.0, M_PI/2 - roll, -M_PI/2 + yaw));
+      transform.setRotation(tf::Quaternion(0.0, -M_PI/2-roll, -yaw));
+      left_elbow_transform = transform;
+    }
+    else if (child_frame_id.compare("right_elbow") == 0)
+    {
+      temp_vector = transform.getOrigin() - right_shoulder_transform.getOrigin();
+      tfScalar yaw = atan2(temp_vector.getX(), temp_vector.getY());
+      tfScalar roll = atan2(temp_vector.getZ(), temp_vector.getY());
+      //   transform.setRotation(tf::Quaternion(0.0, M_PI/2 - roll, -M_PI/2 + yaw));
+      transform.setRotation(tf::Quaternion(0.0, roll, M_PI-yaw));
+      right_elbow_transform = transform;
+    }
+    else if (child_frame_id.compare("left_hand") == 0)
+    {
+      temp_vector = transform.getOrigin() - left_elbow_transform.getOrigin();
+      tfScalar yaw = atan2(temp_vector.getX(), temp_vector.getY());
+      tfScalar roll = atan2(temp_vector.getY(), temp_vector.getZ());
+      tfScalar pitch = atan2(temp_vector.getX(), temp_vector.getZ());
+      // tfScaler pitch = atan2(temp_vector.getX(), temp_vector.getZ());
+      //   transform.setRotation(tf::Quaternion(0.0, M_PI/2 - roll, -M_PI/2 + yaw));
+      transform.setRotation(tf::Quaternion(-pitch, -M_PI/2-roll, -yaw));
+      ROS_INFO_STREAM("Pitch: " << pitch);
+    }
+    else if (child_frame_id.compare("right_hand") == 0)
+    {
+      temp_vector = transform.getOrigin() - right_elbow_transform.getOrigin();
+      tfScalar yaw = atan2(temp_vector.getX(), temp_vector.getY());
+      tfScalar roll = atan2(temp_vector.getZ(), temp_vector.getY());
+      //   transform.setRotation(tf::Quaternion(0.0, M_PI/2 - roll, -M_PI/2 + yaw));
+      transform.setRotation(tf::Quaternion(0.0, roll, M_PI-yaw));
+    }
+    // else if (child_frame_id.compare("torso") == 0)
+    // {
+    //   temp_vector = transform.getOrigin() - pelvis_final_transform.getOrigin();
+    //   tfScalar yaw = atan2(temp_vector.getX(), temp_vector.getY());
+    //   tfScalar roll = atan2(temp_vector.getZ(), temp_vector.getY());
+    //   tfScalar roll = atan2(temp_vector.getZ(), temp_vector.getY());
+    //   //   transform.setRotation(tf::Quaternion(0.0, M_PI/2 - roll, -M_PI/2 + yaw));
+    //   transform.setRotation(tf::Quaternion(0.0, roll, M_PI-yaw));
+    // }
+    
     br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), frame_id, PREFIX_OPENNI+child_frame_id));
 }
 
@@ -125,12 +179,6 @@ void publishTransforms(const std::string& frame_id) {
         XnUserID user = users[i];
         if (!g_UserGenerator.GetSkeletonCap().IsTracking(user))
             continue;
-
-
-        publishTransform(user, XN_SKEL_HEAD,           frame_id, "head");
-        publishTransform(user, XN_SKEL_NECK,           frame_id, "neck");
-        publishTransform(user, XN_SKEL_TORSO,          frame_id, "torso");
-
         publishTransform(user, XN_SKEL_LEFT_SHOULDER,  frame_id, "right_shoulder");
         publishTransform(user, XN_SKEL_LEFT_ELBOW,     frame_id, "right_elbow");
         publishTransform(user, XN_SKEL_LEFT_HAND,      frame_id, "right_hand");
@@ -146,7 +194,11 @@ void publishTransforms(const std::string& frame_id) {
         publishTransform(user, XN_SKEL_RIGHT_HIP,      frame_id, "left_hip");
         publishTransform(user, XN_SKEL_RIGHT_KNEE,     frame_id, "left_knee");
         publishTransform(user, XN_SKEL_RIGHT_FOOT,     frame_id, "left_foot");
-        publishTransform(user, XN_SKEL_TORSO, frame_id, "pelvis");
+        publishTransform(user, XN_SKEL_TORSO,          frame_id, "pelvis");
+
+        publishTransform(user, XN_SKEL_HEAD,           frame_id, "head");
+        publishTransform(user, XN_SKEL_NECK,           frame_id, "neck");
+        publishTransform(user, XN_SKEL_TORSO,          frame_id, "torso");
     }
 }
 
@@ -220,7 +272,7 @@ int main(int argc, char **argv) {
 	nRetVal = g_Context.StartGeneratingAll();
 	CHECK_RC(nRetVal, "StartGenerating");
 
-	ros::Rate r(30);
+	ros::Rate r(100);
 
         
         ros::NodeHandle pnh("~");
