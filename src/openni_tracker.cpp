@@ -62,7 +62,7 @@ void XN_CALLBACK_TYPE UserPose_PoseDetected(xn::PoseDetectionCapability& capabil
 void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string const& frame_id, string const& child_frame_id) {
     static tf::TransformBroadcaster br;
     static tf::Transform left_hip_final_transform, right_hip_final_transform, pelvis_final_transform;
-    static tf::Transform left_shoulder_transform, right_shoulder_transform;
+    static tf::Transform left_shoulder_transform, right_shoulder_transform, neck_transform;
     static tf::Transform left_elbow_transform, right_elbow_transform;
     static tf::Vector3 pelvis_vector, temp_vector;
 
@@ -112,14 +112,26 @@ void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string
 
     transform = change_frame * transform;
 
+    if (child_frame_id.compare("neck") == 0)
+      neck_transform = transform;
     if (child_frame_id.compare("left_hip") == 0)
       left_hip_final_transform = transform;
     else if (child_frame_id.compare("right_hip") == 0)
       right_hip_final_transform = transform;
     else if (child_frame_id.compare("left_shoulder") == 0)
+    {
       left_shoulder_transform = transform;
+      temp_vector = neck_transform.getOrigin() - pelvis_final_transform.getOrigin();
+      tfScalar roll = atan2(temp_vector.getY(), temp_vector.getZ());
+      transform.setRotation(tf::Quaternion(0.0, -roll, M_PI));
+    }
     else if (child_frame_id.compare("right_shoulder") == 0)
+    {
       right_shoulder_transform = transform;
+      temp_vector = neck_transform.getOrigin() - pelvis_final_transform.getOrigin();
+      tfScalar roll = atan2(temp_vector.getY(), temp_vector.getZ());
+      transform.setRotation(tf::Quaternion(0.0, -roll, M_PI));
+    }
     else if (child_frame_id.compare("left_elbow") == 0)
     {
       temp_vector = transform.getOrigin() - left_shoulder_transform.getOrigin();
@@ -144,10 +156,11 @@ void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string
       tfScalar yaw = atan2(temp_vector.getX(), temp_vector.getY());
       tfScalar roll = atan2(temp_vector.getY(), temp_vector.getZ());
       tfScalar pitch = atan2(temp_vector.getX(), temp_vector.getZ());
+      transform.setRotation(tf::Quaternion(0.0, -M_PI/2-roll, -yaw));
+      // transform.setRotation(tf::Quaternion(0.0, M_PI/2 - roll, -M_PI/2 + yaw));
       // tfScaler pitch = atan2(temp_vector.getX(), temp_vector.getZ());
-      //   transform.setRotation(tf::Quaternion(0.0, M_PI/2 - roll, -M_PI/2 + yaw));
-      transform.setRotation(tf::Quaternion(-pitch, -M_PI/2-roll, -yaw));
-      ROS_INFO_STREAM("Pitch: " << pitch);
+      // transform.setRotation(tf::Quaternion(-pitch, -M_PI/2-roll, -yaw));
+      // ROS_INFO_STREAM("Pitch: " << pitch);
     }
     else if (child_frame_id.compare("right_hand") == 0)
     {
@@ -179,6 +192,10 @@ void publishTransforms(const std::string& frame_id) {
         XnUserID user = users[i];
         if (!g_UserGenerator.GetSkeletonCap().IsTracking(user))
             continue;
+        publishTransform(user, XN_SKEL_HEAD,           frame_id, "head");
+        publishTransform(user, XN_SKEL_NECK,           frame_id, "neck");
+        publishTransform(user, XN_SKEL_TORSO,          frame_id, "torso");
+
         publishTransform(user, XN_SKEL_LEFT_SHOULDER,  frame_id, "right_shoulder");
         publishTransform(user, XN_SKEL_LEFT_ELBOW,     frame_id, "right_elbow");
         publishTransform(user, XN_SKEL_LEFT_HAND,      frame_id, "right_hand");
@@ -195,10 +212,6 @@ void publishTransforms(const std::string& frame_id) {
         publishTransform(user, XN_SKEL_RIGHT_KNEE,     frame_id, "left_knee");
         publishTransform(user, XN_SKEL_RIGHT_FOOT,     frame_id, "left_foot");
         publishTransform(user, XN_SKEL_TORSO,          frame_id, "pelvis");
-
-        publishTransform(user, XN_SKEL_HEAD,           frame_id, "head");
-        publishTransform(user, XN_SKEL_NECK,           frame_id, "neck");
-        publishTransform(user, XN_SKEL_TORSO,          frame_id, "torso");
     }
 }
 
