@@ -22,6 +22,88 @@ std::string PREFIX_OPENNI = "/openni/";
 
 bool start_code = false;
 
+int max_window_size = 10;
+int total_joints = 16;
+double transform_array[16][7][100];
+std::map<std::string, int> joint_numbers_map;
+
+void initializeMap()
+{
+  int temp = 0;
+  joint_numbers_map.insert({"head", temp++});
+  joint_numbers_map.insert({"neck", temp++});
+  joint_numbers_map.insert({"torso", temp++});
+  
+  joint_numbers_map.insert({"right_shoulder", temp++});
+  joint_numbers_map.insert({"right_elbow", temp++});
+  joint_numbers_map.insert({"right_hand", temp++});
+  
+  joint_numbers_map.insert({"left_shoulder", temp++});
+  joint_numbers_map.insert({"left_elbow", temp++});
+  joint_numbers_map.insert({"left_hand", temp++});
+  
+  joint_numbers_map.insert({"right_hip", temp++});
+  joint_numbers_map.insert({"right_knee", temp++});
+  joint_numbers_map.insert({"right_foot", temp++});
+  
+  joint_numbers_map.insert({"left_hip", temp++});
+  joint_numbers_map.insert({"left_knee", temp++});
+  joint_numbers_map.insert({"left_foot", temp++});
+  joint_numbers_map.insert({"pelvis", temp++});
+}
+
+double getAvgValue(const int joint_number, const int coord)
+{
+  static int curr_size = 0;
+  if(joint_number == 0 && curr_size<max_window_size)
+    curr_size++;
+  
+  double value = 0;
+  for (int read = 0; read < curr_size;read++)
+  {
+    value += transform_array[joint_number][coord][read];
+  }
+  
+  return value / max_window_size;
+}
+
+void movingAvgFilter(const std::string& frame_name, tf::Transform& transform)
+{
+  int joint_number = joint_numbers_map[frame_name];
+  
+  static int i = 0;
+
+  transform_array[joint_number][0][i] = transform.getOrigin().getX();
+  transform_array[joint_number][1][i] = transform.getOrigin().getY();
+  transform_array[joint_number][2][i] = transform.getOrigin().getZ();
+  
+  transform_array[joint_number][3][i] = transform.getRotation().getX();
+  transform_array[joint_number][4][i] = transform.getRotation().getY();
+  transform_array[joint_number][5][i] = transform.getRotation().getZ();
+  transform_array[joint_number][6][i] = transform.getRotation().getW();
+
+  // Completion of one cycle
+  if(joint_number == 0)
+  {
+    // Restart the window for average
+    i = i < max_window_size - 1 ? i+1 : 0;
+  }    
+
+  tf::Vector3 vector;
+  vector.setX(getAvgValue(joint_number, 0));
+  vector.setY(getAvgValue(joint_number, 1));
+  vector.setZ(getAvgValue(joint_number, 2));
+
+  tf::Quaternion quat;
+  quat.setX(getAvgValue(joint_number, 3));
+  quat.setY(getAvgValue(joint_number, 4));
+  quat.setZ(getAvgValue(joint_number, 5));
+  quat.setW(getAvgValue(joint_number, 6));
+
+  transform.setOrigin(vector);
+  transform.setRotation(quat);
+}
+
 void XN_CALLBACK_TYPE User_NewUser(xn::UserGenerator& generator, XnUserID nId, void* pCookie) {
 	ROS_INFO("New User %d", nId);
 
@@ -179,7 +261,8 @@ void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string
     //   //   transform.setRotation(tf::Quaternion(0.0, M_PI/2 - roll, -M_PI/2 + yaw));
     //   transform.setRotation(tf::Quaternion(0.0, roll, M_PI-yaw));
     // }
-    
+
+    movingAvgFilter(child_frame_id, transform);
     br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), frame_id, PREFIX_OPENNI+child_frame_id));
 }
 
@@ -286,11 +369,11 @@ int main(int argc, char **argv) {
 	CHECK_RC(nRetVal, "StartGenerating");
 
 	ros::Rate r(100);
+  initializeMap();
 
-        
-        ros::NodeHandle pnh("~");
-        string frame_id("openni_depth_frame");
-        pnh.getParam("camera_frame_id", frame_id);
+  ros::NodeHandle pnh("~");
+  string frame_id("openni_depth_frame");
+  pnh.getParam("camera_frame_id", frame_id);
                 
 	while (ros::ok()) {
 		g_Context.WaitAndUpdateAll();
