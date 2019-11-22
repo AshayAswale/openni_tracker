@@ -70,7 +70,7 @@ double getAvgValue(const int joint_number, const int coord)
 void movingAvgFilter(const std::string& frame_name, tf::Transform& transform)
 {
   int joint_number = joint_numbers_map[frame_name];
-  
+
   static int i = 0;
 
   transform_array[joint_number][0][i] = transform.getOrigin().getX();
@@ -153,6 +153,7 @@ void publishTransform(XnUserID const& user, XnSkeletonJoint const& joint, string
     pelvis_vector = left_hip_final_transform.getOrigin() / 2 + right_hip_final_transform.getOrigin() / 2;
     pelvis_final_transform.setRotation(tf::Quaternion(0.0, 0.0, M_PI));
     pelvis_final_transform.setOrigin(pelvis_vector);
+    movingAvgFilter(child_frame_id, pelvis_final_transform);
     br.sendTransform(
         tf::StampedTransform(pelvis_final_transform, ros::Time::now(), frame_id, PREFIX_OPENNI+child_frame_id));
     return;
